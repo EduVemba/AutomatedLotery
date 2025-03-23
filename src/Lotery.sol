@@ -3,10 +3,11 @@ pragma solidity ^0.8.0;
 
 
 import {Structs} from "./Structs.sol";
+import { NoReentrant } from "./NonReentrant.sol";
 
 error notOwner();
 
-contract Lotery {
+contract Lotery is NoReentrant {
 
     using Structs for Structs.Lotery;
 
@@ -45,6 +46,7 @@ contract Lotery {
 
     address public CurrentWinner;
     uint256 public WinningValue;
+    Structs.Lotery public  OcurringLotery;
 
     /**
      * Events
@@ -54,7 +56,7 @@ contract Lotery {
     /**
      * 
      */
-    function createLotery(uint256 _entryPrice, uint256 _gameAward) external OnlyOwner returns (bool) {
+    function createLotery(uint256 _entryPrice, uint256 _gameAward) external OnlyOwner NoReentrancy returns (bool) {
         require(_gameAward > _entryPrice,"the award should be bigger then the entry");
         for (uint i = 0; i < Loteries.length; i++){
             if (Loteries[i].status == Structs.LoteryStatus.OPEN) {
@@ -75,6 +77,8 @@ contract Lotery {
               status:  Structs.LoteryStatus.OPEN
         });
 
+        OcurringLotery = newLotery;
+
         Loteries.push(newLotery);
         emit newLoteryOpen(_id, gameReward);
 
@@ -86,7 +90,7 @@ contract Lotery {
     /**
      * 
      */
-    function joinLotery(string memory _name) external payable returns (bool) {
+    function joinLotery(string memory _name) external payable NoReentrancy returns (bool) {
         require(msg.value > WinningValue,"the value must be bigger then the winning value");
 
         Structs.User memory newUser = Structs.User({
@@ -98,10 +102,30 @@ contract Lotery {
         PlayingPlayers.push(newUser);
         UserBalance[msg.sender] = msg.value;
 
-        WinningValue = msg.value;
-        CurrentWinner = msg.sender;
+        if (msg.value > WinningValue) {
+            WinningValue = msg.value;
+            CurrentWinner = msg.sender;
+        }
 
         return true;
+    }
+
+    // TODO: Ensure that only the Chainlink Automation trigger call this function
+
+    function endLotery() public NoReentrancy returns (bool) {
+       require(CurrentWinner != address(0),"no user to send");
+
+       OcurringLotery.status = Structs.LoteryStatus.CLOSED;
+
+       (bool transferSuccess,) = payable(CurrentWinner).call{value: gameReward}("");
+       require(transferSuccess,"something went wrong during the transfer");
+
+       WinningValue = 0;
+       CurrentWinner = address(0);
+
+       delete PlayingPlayers;
+    
+      return true;
     }
     
     

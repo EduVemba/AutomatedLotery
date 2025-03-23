@@ -6,8 +6,7 @@ library Structs {
 
     enum LoteryStatus {
         OPEN,
-        CLOSED,
-        CANCELLED
+        CLOSED
     }
 
     struct User {
