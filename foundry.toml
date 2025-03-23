@@ -6,4 +6,8 @@ libs = ["lib"]
 [remappings]
 chainlink-brownie-contracts = "lib/chainlink-brownie-contracts/"
 
+via-IR = true
+
+
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

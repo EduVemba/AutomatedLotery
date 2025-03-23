@@ -12,7 +12,7 @@ library Structs {
 
     struct User {
         address userAddress;
-        uint256 balance;
+        uint256 value;
         string name;
     }
 

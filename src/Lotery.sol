@@ -30,7 +30,6 @@ contract Lotery {
     /**
      * mapping of address of users 
      */
-    mapping(address => Structs.User) public UserMapping;
     mapping(address => uint256) public UserBalance; 
 
     /**
@@ -45,6 +44,7 @@ contract Lotery {
     uint256 internal _id = 1;
 
     address public CurrentWinner;
+    uint256 public WinningValue;
 
     /**
      * Events
@@ -86,7 +86,23 @@ contract Lotery {
     /**
      * 
      */
-    function joinLotery() external {}
+    function joinLotery(string memory _name) external payable returns (bool) {
+        require(msg.value > WinningValue,"the value must be bigger then the winning value");
+
+        Structs.User memory newUser = Structs.User({
+              userAddress: msg.sender,
+              value: msg.value,
+              name: _name
+        });
+
+        PlayingPlayers.push(newUser);
+        UserBalance[msg.sender] = msg.value;
+
+        WinningValue = msg.value;
+        CurrentWinner = msg.sender;
+
+        return true;
+    }
     
     
 }

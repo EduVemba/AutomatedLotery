@@ -12,6 +12,8 @@ contract LoteryTest is Test {
     address USER = makeAddr("USER");
     uint256 constant INITIAL_BALANCE = 100 ether;
 
+    uint256 constant SUCCESS_VALUE = 10;
+
 
     function setUp() public {
         loteryInstance = new Lotery();
@@ -34,6 +36,25 @@ contract LoteryTest is Test {
     function testRewardBiggerThenEntry() public  {
         vm.expectRevert("the award should be bigger then the entry");
         loteryInstance.createLotery(100, 50);
+    }
+
+
+    function testJoinLotery() public {
+        loteryInstance.joinLotery{value: SUCCESS_VALUE }("Eduardo");
+    }
+
+    /**
+     * SUCCESS_VALUE = 10
+     * FAILING_VALUE = 5
+     */
+    function testCannotJoinLotery() public {
+        loteryInstance.joinLotery{value: SUCCESS_VALUE}("Eduardo");
+
+        uint256 FAILING_VALUE = 5;
+
+        vm.expectRevert("the value must be bigger then the winning value");
+
+        loteryInstance.joinLotery{value: FAILING_VALUE}("Ruth");
     }
 
 }
