@@ -19,7 +19,8 @@ library Structs {
         uint256 id;
         address creator;
         uint256 price;
-        User[] players;
+        address[] players_id;
+        User[] players_info;
         uint256 startTime;
         uint256 reward;
         LoteryStatus status;

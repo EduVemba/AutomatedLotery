@@ -32,6 +32,7 @@ contract Lotery is NoReentrant {
      * mapping of address of users 
      */
     mapping(address => uint256) public UserBalance; 
+    mapping(address => Structs.User) public UserInfo;
 
     /**
      * Array for players
@@ -41,6 +42,8 @@ contract Lotery is NoReentrant {
     Structs.User[] public PlayingPlayers;
     
     Structs.Lotery[] public Loteries;
+
+    address[] public UsersPlaying;
 
     uint256 internal _id = 1;
 
@@ -52,17 +55,20 @@ contract Lotery is NoReentrant {
      * Events
      */
     event newLoteryOpen(uint256 indexed id, uint256 prize);
+    event closedLotery(uint256 indexed id, uint256 time);
 
     /**
      * 
      */
     function createLotery(uint256 _entryPrice, uint256 _gameAward) external OnlyOwner NoReentrancy returns (bool) {
         require(_gameAward > _entryPrice,"the award should be bigger then the entry");
+
         for (uint i = 0; i < Loteries.length; i++){
             if (Loteries[i].status == Structs.LoteryStatus.OPEN) {
                 revert("There is a open lotery");
             }
         }
+
 
         entryPrice = _entryPrice;
         gameReward = _gameAward;
@@ -71,7 +77,8 @@ contract Lotery is NoReentrant {
               id: _id,
               creator: msg.sender,
               price: entryPrice,
-              players: PlayingPlayers,
+              players_id: UsersPlaying,
+              players_info: PlayingPlayers,
               startTime: block.timestamp,
               reward: gameReward,
               status:  Structs.LoteryStatus.OPEN
@@ -93,14 +100,30 @@ contract Lotery is NoReentrant {
     function joinLotery(string memory _name) external payable NoReentrancy returns (bool) {
         require(msg.value > WinningValue,"the value must be bigger then the winning value");
 
+        bool isNewUser;
+
+        for (uint i = 0; i < UsersPlaying.length; i++) {
+            if (UsersPlaying[i] == msg.sender){
+                UserBalance[msg.sender] += msg.value;
+                UserInfo[msg.sender].value += msg.value;
+                isNewUser = false;
+                break;
+            }
+        }
+
+    if (isNewUser) {
         Structs.User memory newUser = Structs.User({
               userAddress: msg.sender,
               value: msg.value,
               name: _name
         });
+    
 
         PlayingPlayers.push(newUser);
+        UsersPlaying.push(msg.sender);
         UserBalance[msg.sender] = msg.value;
+        UserInfo[msg.sender] = newUser;
+    }
 
         if (msg.value > WinningValue) {
             WinningValue = msg.value;
@@ -123,7 +146,10 @@ contract Lotery is NoReentrant {
        WinningValue = 0;
        CurrentWinner = address(0);
 
+       emit closedLotery(OcurringLotery.id, block.timestamp);
+
        delete PlayingPlayers;
+       delete UsersPlaying;
     
       return true;
     }
