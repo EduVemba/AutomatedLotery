@@ -39,7 +39,6 @@ contract Lotery is NoReentrant {
      * 
      * @notice when a player join the Lotery he is added in the array
      */
-    Structs.User[] public PlayingPlayers;
     
     Structs.Lotery[] public Loteries;
 
@@ -56,12 +55,15 @@ contract Lotery is NoReentrant {
      */
     event newLoteryOpen(uint256 indexed id, uint256 prize);
     event closedLotery(uint256 indexed id, uint256 time);
+    event newUserEntered(address indexed user, uint256 amount);
+    event userUpgraded(address indexed user, uint256 amount);
 
     /**
      * 
      */
-    function createLotery(uint256 _entryPrice, uint256 _gameAward) external OnlyOwner NoReentrancy returns (bool) {
+    function createLotery(uint256 _entryPrice, uint256 _gameAward) external payable OnlyOwner NoReentrancy returns (bool) {
         require(_gameAward > _entryPrice,"the award should be bigger then the entry");
+        require(msg.value >= _gameAward,"you must send enough ETH to fund the reward");
 
         for (uint i = 0; i < Loteries.length; i++){
             if (Loteries[i].status == Structs.LoteryStatus.OPEN) {
@@ -73,12 +75,14 @@ contract Lotery is NoReentrant {
         entryPrice = _entryPrice;
         gameReward = _gameAward;
 
+      //  payable(address(this)).transfer(_gameAward);
+
         Structs.Lotery memory newLotery = Structs.Lotery({
               id: _id,
               creator: msg.sender,
               price: entryPrice,
               players_id: UsersPlaying,
-              players_info: PlayingPlayers,
+             // players_info: PlayingPlayers,
               startTime: block.timestamp,
               reward: gameReward,
               status:  Structs.LoteryStatus.OPEN
@@ -100,12 +104,14 @@ contract Lotery is NoReentrant {
     function joinLotery(string memory _name) external payable NoReentrancy returns (bool) {
         require(msg.value > WinningValue,"the value must be bigger then the winning value");
 
-        bool isNewUser;
+        bool isNewUser = true;
 
         for (uint i = 0; i < UsersPlaying.length; i++) {
             if (UsersPlaying[i] == msg.sender){
                 UserBalance[msg.sender] += msg.value;
                 UserInfo[msg.sender].value += msg.value;
+                CurrentWinner = msg.sender;
+                emit userUpgraded(msg.sender, msg.value);
                 isNewUser = false;
                 break;
             }
@@ -118,11 +124,12 @@ contract Lotery is NoReentrant {
               name: _name
         });
     
-
-        PlayingPlayers.push(newUser);
+        CurrentWinner = msg.sender;
         UsersPlaying.push(msg.sender);
         UserBalance[msg.sender] = msg.value;
         UserInfo[msg.sender] = newUser;
+
+        emit newUserEntered(msg.sender, msg.value);
     }
 
         if (msg.value > WinningValue) {
@@ -137,6 +144,7 @@ contract Lotery is NoReentrant {
 
     function endLotery() public NoReentrancy returns (bool) {
        require(CurrentWinner != address(0),"no user to send");
+      // require(address(this).balance > gameReward,"not enough money");
 
        OcurringLotery.status = Structs.LoteryStatus.CLOSED;
 
@@ -148,7 +156,6 @@ contract Lotery is NoReentrant {
 
        emit closedLotery(OcurringLotery.id, block.timestamp);
 
-       delete PlayingPlayers;
        delete UsersPlaying;
     
       return true;

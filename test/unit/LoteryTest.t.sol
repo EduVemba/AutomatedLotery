@@ -12,7 +12,7 @@ contract LoteryTest is Test {
     using Structs for Structs.LoteryStatus;
 
     address USER = makeAddr("USER");
-    uint256 constant INITIAL_BALANCE = 100 ether;
+    uint256 constant INITIAL_BALANCE = 1000 ether;
 
     uint256 constant SUCCESS_VALUE = 10;
 
@@ -23,16 +23,17 @@ contract LoteryTest is Test {
     }
 
     function testLoteryCreates() public {
-
-       assertTrue(loteryInstance.createLotery(10, 1000),"Should return true");
+        loteryInstance.createLotery{value: 100}(10, 100);
+       assertTrue(address(loteryInstance).balance >= 100,"Contrato deve ter saldo suficiente");
     }
 
     function testCreatingTwoLoterys() public {
-        loteryInstance.createLotery(10, 200);
+    
+        loteryInstance.createLotery{value: 200}(10, 200);
 
         vm.expectRevert("There is a open lotery");
 
-        loteryInstance.createLotery(2, 100);
+        loteryInstance.createLotery{value: 100}(2, 100);
     }
 
     function testRewardBiggerThenEntry() public  {
@@ -61,16 +62,28 @@ contract LoteryTest is Test {
 
 
     function testEndLotery() public {
-        loteryInstance.createLotery(5, 50);
+        loteryInstance.createLotery{value: 100}(5, 100);
 
+        vm.prank(USER);
         loteryInstance.joinLotery{value: SUCCESS_VALUE}("Eduardo");
 
         uint256 SUPERIOR_VALUE = 15;
 
+         address USER2 = makeAddr("USER2");
+         vm.deal(USER2, INITIAL_BALANCE);
+         vm.prank(USER2);
         loteryInstance.joinLotery{value: SUPERIOR_VALUE}("Vemba");
+        
 
-        assertTrue(loteryInstance.endLotery());
+        assertEq(loteryInstance.CurrentWinner(), USER2);
+
+        assertTrue(loteryInstance.endLotery(),"A loteria deve terminar com sucesso");
+
+        assertEq(USER2.balance, INITIAL_BALANCE + 100 - SUPERIOR_VALUE,"O vencedor deve receber o premio");
+
     }
+
+    
 
 }
 
